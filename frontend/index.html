@@ -2,37 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Hydrogen Storage Alloy Extractor</title>
+  <title>Hydrogen Storage Alloys – Deploying Contextual Capabilities of LLMs for Scientific Literature Mining</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <h1>Hydrogen Storage Alloy Extractor</h1>
-    <p class="subtitle">Upload a research PDF and get a structured alloy property table.</p>
+  <header class="site-header">
+    <div class="branding">
+      <h1>Hydrogen Storage Alloys – Deploying Contextual Capabilities of LLMs for Scientific Literature Mining</h1>
+    </div>
   </header>
   <main>
-    <section class="panel">
-      <form id="uploadForm">
-        <label class="file-label">Choose PDF
+    <section class="card upload-card">
+      <form id="uploadForm" class="upload-form">
+        <div class="field-group">
           <input type="file" name="file" id="fileInput" accept="application/pdf" required />
-        </label>
-        <button type="submit" id="submitBtn">Extract</button>
+          <label for="fileInput" class="file-drop" id="fileDropLabel">Drop PDF or click to browse</label>
+        </div>
+        <div class="actions">
+          <button type="submit" id="submitBtn" class="primary-btn">Extract</button>
+        </div>
       </form>
-      <div id="status"></div>
+      <div id="status" class="status-line"></div>
     </section>
 
-    <section id="resultSection" class="hidden">
-      <h2>Extracted Alloy Table</h2>
-      <div id="download"></div>
-      <div class="table-wrapper">
-        <table id="resultTable"></table>
+    <section id="resultSection" class="hidden fade-in">
+      <div class="results-head">
+        <h2>Extraction Results</h2>
+        <div id="download" class="downloads"></div>
       </div>
-      <pre id="rawCsv" class="raw"></pre>
+      <div class="table-wrapper minimal-scroll">
+        <table id="resultTable" class="data-table"></table>
+      </div>
+      <details class="raw-block">
+        <summary>Raw Pipe Table</summary>
+        <pre id="rawCsv" class="raw"></pre>
+      </details>
     </section>
   </main>
 
-  <footer>
-    <small>Frontend only. Backend API endpoints: <code>/extract</code>, <code>/health</code>, <code>/config</code>.</small>
+  <footer class="site-footer">
+    <small>
+      <span>API: <code>/extract</code> · <code>/health</code> · <code>/config</code></span>
+      <span class="sep">|</span>
+      <span id="buildInfo"></span>
+    </small>
   </footer>
 
   <script src="script.js"></script>

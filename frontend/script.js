@@ -6,18 +6,45 @@ const resultTable = document.getElementById('resultTable');
 const rawCsv = document.getElementById('rawCsv');
 const downloadDiv = document.getElementById('download');
 const submitBtn = document.getElementById('submitBtn');
+const fileInput = document.getElementById('fileInput');
+const fileDropLabel = document.getElementById('fileDropLabel');
+const buildInfo = document.getElementById('buildInfo');
+
+// Drag & drop visual feedback
+['dragenter','dragover'].forEach(evt => {
+  fileDropLabel.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); fileDropLabel.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(evt => {
+  fileDropLabel.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); fileDropLabel.classList.remove('drag'); });
+});
+fileDropLabel.addEventListener('drop', e=>{
+  if(e.dataTransfer?.files?.length){
+    fileInput.files = e.dataTransfer.files;
+  }
+});
+
+fileInput.addEventListener('change', ()=>{
+  if(fileInput.files.length){
+    fileDropLabel.textContent = fileInput.files[0].name;
+  } else {
+    fileDropLabel.textContent = 'Drop PDF or click to browse';
+  }
+});
 
 async function checkHealth(){
   try{
-  const r = await fetch(API_BASE + '/health');
-    if(r.ok){ const j = await r.json(); statusEl.innerText = `Ready. Model: ${j.model}`; }
-  }catch(e){ statusEl.innerText='Cannot reach backend.'; }
+    const r = await fetch(API_BASE + '/health');
+    if(r.ok){
+      const j = await r.json();
+      statusEl.innerText = `Ready. Model: ${j.model}`;
+      if(buildInfo) buildInfo.textContent = `Model: ${j.model}`;
+    }
+  }catch(e){ statusEl.innerText='Cannot reach backend.'; if(buildInfo) buildInfo.textContent='offline'; }
 }
 checkHealth();
 
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const fileInput = document.getElementById('fileInput');
   if(!fileInput.files.length){ return; }
   submitBtn.disabled = true;
   statusEl.textContent = 'Uploading & processing...';
@@ -40,7 +67,7 @@ form.addEventListener('submit', async (e)=>{
     return;
   }
   const data = await resp.json();
-  statusEl.textContent = 'Done.';
+  statusEl.textContent = `Done. Rows: ${data.rows.length}`;
   renderTable(data.csv_text);
   rawCsv.textContent = data.csv_text;
   downloadDiv.innerHTML = `<a href="${data.download_url}" download class="dl">Download CSV</a>`;
