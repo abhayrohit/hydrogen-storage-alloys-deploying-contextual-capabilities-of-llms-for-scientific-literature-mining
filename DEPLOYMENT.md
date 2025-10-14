@@ -2,7 +2,7 @@
 
 ## Step 1: Enable GitHub Pages
 
-1. Go to your GitHub repository: https://github.com/arooon-n/literature-mining-hydrogen-storage-alloys
+1. Go to your GitHub repository: https://github.com/abhayrohit/literature-mining-hydrogen-storage-alloys
 2. Click **Settings** → **Pages** (left sidebar)
 3. Under **Source**, select:
    - **Source**: GitHub Actions
@@ -23,7 +23,7 @@ git add .
 git commit -m "Deploy frontend to GitHub Pages"
 
 # Add remote (if not already added)
-git remote add origin https://github.com/arooon-n/literature-mining-hydrogen-storage-alloys.git
+git remote add origin https://github.com/abhayrohit/literature-mining-hydrogen-storage-alloys.git
 
 # Push to main branch
 git push -u origin main
@@ -35,7 +35,7 @@ git push -u origin main
 2. You'll see "Deploy Frontend to GitHub Pages" workflow running
 3. Wait 1-2 minutes for it to complete
 4. Once done, your frontend will be live at:
-   **https://arooon-n.github.io/literature-mining-hydrogen-storage-alloys/**
+   **https://abhayrohit.github.io/literature-mining-hydrogen-storage-alloys/**
 
 ## Step 4: Use the Application
 
@@ -45,7 +45,7 @@ python main_fastapi.py
 ```
 
 ### Access Frontend:
-Open in browser: https://arooon-n.github.io/literature-mining-hydrogen-storage-alloys/
+Open in browser: https://abhayrohit.github.io/literature-mining-hydrogen-storage-alloys/
 
 The GitHub Pages frontend will automatically connect to your local backend at http://localhost:8000
 
@@ -76,7 +76,7 @@ git push origin main
 ## 🎯 Quick Verification
 
 After deployment, test:
-1. Visit: https://arooon-n.github.io/literature-mining-hydrogen-storage-alloys/
+1. Visit: https://abhayrohit.github.io/literature-mining-hydrogen-storage-alloys/
 2. Start backend: `python main_fastapi.py`
 3. You should see "✅ System Ready • Model: gpt-oss:120b-cloud"
 4. Upload a PDF and test extraction
@@ -94,7 +94,7 @@ After deployment, test:
 git remote -v
 
 # If not set, add it:
-git remote add origin https://github.com/arooon-n/literature-mining-hydrogen-storage-alloys.git
+git remote add origin https://github.com/abhayrohit/literature-mining-hydrogen-storage-alloys.git
 ```
 
 ### Need to force push?

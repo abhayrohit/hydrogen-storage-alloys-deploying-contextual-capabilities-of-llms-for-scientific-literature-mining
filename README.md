@@ -1,7 +1,7 @@
 # Hydrogen Storage Alloys - LLM Literature Mining
 
 ## 🚀 Live Demo
-**Frontend**: https://arooon-n.github.io/literature-mining-hydrogen-storage-alloys/
+**Frontend**: https://abhayrohit.github.io/literature-mining-hydrogen-storage-alloys/
 
 **Backend**: You need to run the backend locally (instructions below)
 
