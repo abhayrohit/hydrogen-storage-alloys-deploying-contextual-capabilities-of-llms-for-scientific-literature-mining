@@ -1,83 +1,116 @@
-# literature-mining-hydrogen-storage-alloys
+# Hydrogen Storage Alloys - LLM Literature Mining
 
-End-to-end pipeline to extract structured hydrogen storage alloy data from PDF research papers using a local Ollama LLM (default: gpt-oss:120b-cloud). Includes:
+## 🚀 Live Demo
+**Frontend**: https://arooon-n.github.io/literature-mining-hydrogen-storage-alloys/
 
-- PDF text extraction (PyMuPDF)
-- LLM-based structured extraction of alloy compositions & properties
-- Rule-based fallback extraction
-- FastAPI backend + minimal HTML frontend for uploading a PDF and downloading the extracted CSV table
+**Backend**: You need to run the backend locally (instructions below)
 
-## Quick Start
+## 📋 Prerequisites
+- Python 3.8+
+- Ollama running locally with `gpt-oss:120b-cloud` model
+- Git
 
-### 1. Install Dependencies
+## 🛠️ Setup & Run
+
+### 1. Clone the repository
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/arooon-n/literature-mining-hydrogen-storage-alloys.git
+cd literature-mining-hydrogen-storage-alloys
 ```
 
-### 2. (Recommended) Create Virtual Environment (Windows PowerShell)
-```powershell
-py -3.12 -m venv .venv
-./.venv/Scripts/Activate.ps1
-pip install --upgrade pip
-pip install -r requirements.txt
+### 2. Install Python dependencies
+```bash
+python -m pip install -r requirements.txt
 ```
 
-If Python 3.12 not available, substitute `py -3.13`.
-
-### 3. Pull/Prepare an Ollama Model
-```powershell
-ollama run gpt-oss:120b-cloud
+### 3. Start the backend server
+```bash
+python main_fastapi.py
 ```
-This first run pulls the model. For lower resource usage, pick a smaller variant (e.g., `gpt-oss:7b`).
 
-### 4. Run the API
-```powershell
+The backend will start at: http://localhost:8000
+
+### 4. Access the application
+**Option A - Use GitHub Pages (Recommended)**
+- Open: https://arooon-n.github.io/literature-mining-hydrogen-storage-alloys/
+- This will connect to your local backend at http://localhost:8000
+
+**Option B - Use Local Frontend**
+- Open: http://localhost:8000/
+
+## 🌐 GitHub Pages Deployment
+
+The frontend is automatically deployed to GitHub Pages when you push to the `main` branch.
+
+### Manual deployment (if needed):
+```bash
+# Push your changes
+git add .
+git commit -m "Update frontend"
+git push origin main
+```
+
+GitHub Actions will automatically:
+1. Build and deploy the frontend to GitHub Pages
+2. Configure it to connect to http://localhost:8000 for API calls
+
+## 📝 Configuration
+
+### Environment Variables (Optional)
+```bash
+# Windows PowerShell
+$env:OLLAMA_URL="http://localhost:11434"
 $env:MODEL_NAME="gpt-oss:120b-cloud"
-uvicorn main_fastapi:app --host 0.0.0.0 --port 8000 --reload
+
+# Linux/Mac
+export OLLAMA_URL="http://localhost:11434"
+export MODEL_NAME="gpt-oss:120b-cloud"
 ```
 
-### 4. Open the Frontend
-Navigate to: http://localhost:8000
+## 📂 Project Structure
+```
+.
+├── main_fastapi.py          # Backend API server
+├── llm_extractor.py          # LLM extraction logic
+├── requirements.txt          # Python dependencies
+├── frontend/                 # Frontend files (deployed to GitHub Pages)
+│   ├── index.html
+│   ├── script.js
+│   └── styles.css
+├── data/                     # Data directory
+│   ├── pdfs/
+│   └── raw_text/
+├── outputs/                  # Extracted CSV files
+└── uploads/                  # Uploaded PDFs
 
-Upload a PDF; after processing you will see a table and a link to download the CSV.
-Health check: http://localhost:8000/health
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| OLLAMA_URL | Base URL of Ollama server | http://localhost:11434 |
-| MODEL_NAME | Ollama model name | gpt-oss:120b-cloud |
-
-Example (PowerShell) select smaller model:
-```powershell
-$env:MODEL_NAME="gpt-oss:7b"
 ```
 
-## Output Table Schema (Alloy Table Mode)
+## 🔧 Troubleshooting
 
-```
-Alloy Name | Storage Capacity | Temperature Range | Pressure Range | Synthesis Method
-```
-Empty cells are left blank, no N/A tokens.
+### Backend not reachable
+- Ensure the backend is running: `python main_fastapi.py`
+- Check firewall settings allow localhost:8000
+- Verify Ollama is running: `ollama list`
 
-## Directory Structure Created at Runtime
+### CORS errors
+- The backend is configured to allow all origins
+- Clear browser cache (Ctrl+Shift+R)
 
-- `uploads/` – raw uploaded PDFs
-- `data/raw_text/` – extracted plain text
-- `outputs/` – generated alloy CSV tables
+### GitHub Pages not updating
+- Check Actions tab in GitHub repository
+- Ensure GitHub Pages is enabled in repository settings
+- Wait 1-2 minutes after push for deployment
 
-## Fallback & Reliability
+## 📊 Features
+- PDF upload and text extraction
+- Multi-chunk LLM processing for large papers
+- Alloy data extraction with AI model
+- CSV export of extracted data
+- Real-time progress tracking
+- Loading overlays during processing
 
-If the LLM output is malformed, the backend sanitizes lines, enforces the header, and deduplicates alloys.
+## 👥 Team
+AIE - B | Group - 17
 
-## Future Enhancements
-
-- Add batch processing endpoint
-- Integrate database persistence (SQLite/Postgres)
-- Add authentication & job queue for large PDFs
-
-## Citation / Academic Use
-
-Please verify extracted data manually before publishing results; LLM outputs may contain omissions or subtle parsing errors.
-
+## 📄 License
+MIT License

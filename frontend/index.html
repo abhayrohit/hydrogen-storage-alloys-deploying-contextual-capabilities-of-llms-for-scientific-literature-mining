@@ -1,53 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Hydrogen Storage Alloys – Deploying Contextual Capabilities of LLMs for Scientific Literature Mining</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <header class="site-header">
-    <div class="branding">
-      <h1>Hydrogen Storage Alloys – Deploying Contextual Capabilities of LLMs for Scientific Literature Mining</h1>
-    </div>
-  </header>
-  <main>
-    <section class="card upload-card">
-      <form id="uploadForm" class="upload-form">
-        <div class="field-group">
-          <input type="file" name="file" id="fileInput" accept="application/pdf" required />
-          <label for="fileInput" class="file-drop" id="fileDropLabel">Drop PDF or click to browse</label>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hydrogen Storage Alloy Extractor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>
+        Hydrogen Storage Alloys | Deploying Contextual Capabilities of LLMs for
+        Scientific Literature Mining
+      </h1>
+      <p class="subtitle">
+        Upload a research PDF and get a structured alloy property table.
+      </p>
+    </header>
+    <main>
+      <section class="upload-panel">
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden" aria-hidden="true">
+          <div class="loading-content" role="status" aria-live="polite">
+            <div class="spinner" aria-hidden="true"></div>
+            <div class="loading-text" id="loadingText">Uploading and analyzing your PDF…</div>
+            <div class="loading-subtext" id="loadingSubText">This may take a minute for long papers.</div>
+          </div>
         </div>
-        <div class="actions">
-          <button type="submit" id="submitBtn" class="primary-btn">Extract</button>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📄</div>
+          <h3>Upload PDF Document</h3>
+          <p>Select a research paper about hydrogen storage alloys</p>
+          <form id="uploadForm" novalidate onsubmit="return false;">
+            <input
+              type="file"
+              name="file"
+              id="fileInput"
+              accept="application/pdf"
+              required
+              hidden
+            />
+            <label for="fileInput" class="file-button">Choose PDF File</label>
+            <button
+              type="submit"
+              id="submitBtn"
+              class="extract-button"
+              disabled
+            >
+              Extract Data
+            </button>
+          </form>
+          <div id="fileInfo" class="file-info hidden"></div>
         </div>
-      </form>
-      <div id="status" class="status-line"></div>
-    </section>
 
-    <section id="resultSection" class="hidden fade-in">
-      <div class="results-head">
-        <h2>Extraction Results</h2>
-        <div id="download" class="downloads"></div>
-      </div>
-      <div class="table-wrapper minimal-scroll">
-        <table id="resultTable" class="data-table"></table>
-      </div>
-      <details class="raw-block">
-        <summary>Raw Pipe Table</summary>
+        <div id="status" class="status-area"></div>
+
+        <div id="progressContainer" class="progress-container hidden">
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <div id="progressText" class="progress-text">Processing...</div>
+        </div>
+      </section>
+
+      <section id="resultSection" class="hidden">
+        <h2>Extracted Alloy Table</h2>
+        <div id="download"></div>
+        <div class="table-wrapper">
+          <table id="resultTable"></table>
+        </div>
         <pre id="rawCsv" class="raw"></pre>
-      </details>
-    </section>
-  </main>
+      </section>
+    </main>
 
-  <footer class="site-footer">
-    <small>
-      <span>API: <code>/extract</code> · <code>/health</code> · <code>/config</code></span>
-      <span class="sep">|</span>
-      <span id="buildInfo"></span>
-    </small>
-  </footer>
+    <footer>AIE - B | Group - 17 | gpt-oss:120b</footer>
 
-  <script src="script.js"></script>
-</body>
+    <script src="script.js"></script>
+  </body>
 </html>

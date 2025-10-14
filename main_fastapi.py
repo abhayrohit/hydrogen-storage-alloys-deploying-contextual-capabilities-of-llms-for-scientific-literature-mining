@@ -22,10 +22,14 @@ import requests
 import traceback
 import re
 from typing import List, Dict, Tuple, Any
+import logging
 from llm_extractor import get_table_few_shot_block  # centralized few-shot helper
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-oss:120b-cloud")
+
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Hydrogen Storage Alloy Extractor API", version="0.2.1")
 
@@ -42,6 +46,7 @@ UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 RAW_TEXT_DIR = os.path.join(BASE_DIR, "data", "raw_text")
 RESULT_DIR = os.path.join(BASE_DIR, "outputs")
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+FRONTEND_COPY_DIR = os.path.join(BASE_DIR, "frontend_copy")  # optional drop-in UI override
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(RAW_TEXT_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
@@ -56,6 +61,10 @@ ALLOY_TABLE_HEADER = [
     "Comments"
 ]
 
+# ----- NEW MULTI-CHUNK EXTRACTION LOGIC -----
+# Rationale: Single-pass prompt was truncating papers (12000 char cap) causing missed alloys.
+# We now split the paper text into overlapping chunks, extract JSON-structured alloy data per chunk,
+# and aggregate + deduplicate across the full paper.
 
 MAX_CHARS_PER_CHUNK = int(os.environ.get("MAX_CHARS_PER_CHUNK", 8000))  # conservative for many local models
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", 600))
@@ -379,24 +388,65 @@ def alloys_to_csv_rows(alloys: List[Dict[str, str]]) -> Tuple[str, List[Dict[str
 
 # ----- END MULTI-CHUNK EXTRACTION LOGIC -----
 
-# Serve static frontend (optional). If 'frontend' folder exists, mount at root.
-if os.path.isdir(FRONTEND_DIR):
-    app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+"""
+Static frontend serving
+Preferred folder order:
+  1) frontend_copy (drop-in UI from "1 - Copy")
+  2) frontend      (default UI bundled in this repo)
+We mount whichever exists at /frontend and rewrite relative asset paths in index.html
+so that references like "script.js" or "css/app.css" load from /frontend/...
+"""
+FRONTEND_TO_SERVE = FRONTEND_COPY_DIR if os.path.isdir(FRONTEND_COPY_DIR) else FRONTEND_DIR
+if os.path.isdir(FRONTEND_TO_SERVE):
+    app.mount("/frontend", StaticFiles(directory=FRONTEND_TO_SERVE), name="frontend")
 
     @app.get("/", response_class=HTMLResponse)
     def root_index():
-        index_path = os.path.join(FRONTEND_DIR, "index.html")
+        index_path = os.path.join(FRONTEND_TO_SERVE, "index.html")
         if os.path.exists(index_path):
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            inject = "<script>window.API_BASE='';</script>"  # same origin
-            # Rewrite relative asset paths to mounted /frontend path
-            content = content.replace('href="styles.css"', 'href="/frontend/styles.css"')
-            content = content.replace("src=\"script.js\"", "src=\"/frontend/script.js\"")
+            logger.info("Serving index from %s (len=%d)", index_path, len(content))
+            # Ensure API calls go to the same origin by default unless page sets it earlier.
+            # Insert right after <head> when possible to avoid pre-DOCTYPE content.
+            head_match = re.search(r"<head[^>]*>", content, flags=re.IGNORECASE)
+            if head_match:
+                insert_pos = head_match.end()
+                content = content[:insert_pos] + "<script>window.API_BASE=window.API_BASE||'';</script>" + content[insert_pos:]
+            else:
+                # Fallback: prepend safely
+                content = "<script>window.API_BASE=window.API_BASE||'';</script>" + content
+            # Generic rewrite of asset paths to mounted /frontend path
+            try:
+                # 1) Relative paths without leading slash (double quotes)
+                content = re.sub(r'href="(?!https?:|/|#|data:|mailto:)([^"]+)"', r'href="/frontend/\1"', content)
+                content = re.sub(r'src="(?!https?:|/|#|data:)([^"]+)"', r'src="/frontend/\1"', content)
+                # 2) Relative paths without leading slash (single quotes)
+                content = re.sub(r"href='(?!https?:|/|#|data:|mailto:)([^']+)'", r"href='/frontend/\1'", content)
+                content = re.sub(r"src='(?!https?:|/|#|data:)([^']+)'", r"src='/frontend/\1'", content)
+                # 3) Absolute root paths not already under /frontend or API routes (double quotes)
+                content = re.sub(r'href="/(?!frontend/|api/|download/|health/?|config)([^"]+)"', r'href="/frontend/\1"', content)
+                content = re.sub(r'src="/(?!frontend/|api/|download/|health/?|config)([^"]+)"', r'src="/frontend/\1"', content)
+                # 4) Absolute root paths (single quotes)
+                content = re.sub(r"href='/(?!frontend/|api/|download/|health/?|config)([^']+)'", r"href='/frontend/\1'", content)
+                content = re.sub(r"src='/(?!frontend/|api/|download/|health/?|config)([^']+)'", r"src='/frontend/\1'", content)
+            except Exception:
+                pass
+            # Prevent full-page reloads on submit for forms that forgot to add onsubmit="return false;"
+            try:
+                def add_onsubmit(m):
+                    full, attrs, end = m.group(0), m.group(1) or '', m.group(2)
+                    if re.search(r'onsubmit\s*=', attrs, flags=re.IGNORECASE):
+                        return m.group(0)
+                    # preserve spacing
+                    return f"<form{attrs} onsubmit=\"return false;\"{end}"
+                content = re.sub(r"<form([^>]*)>(?i)", add_onsubmit, content)
+            except Exception:
+                pass
             # Basic favicon injection if absent
             if 'rel="icon"' not in content:
                 content = content.replace('</head>', '<link rel="icon" href="/favicon.ico" /></head>')
-            return inject + content
+            return content
         return "<h1>Frontend not found</h1>"
 
     @app.get('/favicon.ico')
@@ -411,13 +461,23 @@ if os.path.isdir(FRONTEND_DIR):
 @app.get("/health")
 def health():
     """Simple health/status endpoint."""
-    return {
+    info = {
         "status": "ok",
         "model": MODEL_NAME,
         "ollama_url": OLLAMA_URL,
         "upload_dir_exists": os.path.isdir(UPLOAD_DIR),
         "outputs_dir_exists": os.path.isdir(RESULT_DIR)
     }
+    logger.info("/health requested -> %s", info)
+    return info
+
+# Compatibility aliases for frontends expecting /api prefix or trailing slash
+@app.get("/api/health")
+def api_health():
+    return health()
+@app.get("/health/")
+def health_trailing():
+    return health()
 
 @app.get("/config")
 def config():
@@ -512,12 +572,18 @@ async def extract(file: UploadFile = File(...)):
     """Enhanced extraction endpoint with multi-chunk alloy aggregation.
     Returns: JSON containing rows + csv_text + diagnostic info about chunk processing.
     """
+    logger.info("/extract POST called: filename=%s content_type=%s", getattr(file, 'filename', None), file.content_type)
     if file.content_type != 'application/pdf':
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
     file_id = str(uuid.uuid4())
     pdf_path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
     with open(pdf_path, 'wb') as f:
         f.write(await file.read())
+    try:
+        file_size = os.path.getsize(pdf_path)
+        logger.info("Saved upload to %s (%d bytes)", pdf_path, file_size)
+    except Exception:
+        pass
 
     # Extract text & persist raw text
     try:
@@ -532,7 +598,10 @@ async def extract(file: UploadFile = File(...)):
     # Multi-chunk processing
     title, abstract = extract_title_and_abstract(text)
     allowed_alloys = find_alloy_candidates(title + "\n" + abstract) if FILTER_TITLE_ABSTRACT else []
+    logger.info("Title detected: %s", (title[:120] + '...') if title and len(title) > 120 else title)
+    logger.info("Abstract length=%d; allowed_alloys_count=%d", len(abstract or ''), len(allowed_alloys))
     chunks = chunk_text(text)
+    logger.info("Split into %d chunks", len(chunks))
     all_chunk_results: List[List[Dict[str, str]]] = []
     chunk_errors = 0
     for idx, chunk in enumerate(chunks):
@@ -552,6 +621,7 @@ async def extract(file: UploadFile = File(...)):
 
     aggregated = aggregate_alloys(all_chunk_results)
     pre_filter_count = len(aggregated)
+    logger.info("Aggregated alloys before filters: %d", pre_filter_count)
     if not KEEP_EMPTY_ALLOYS:
         aggregated = filter_informative_alloys(aggregated)
     # Apply title/abstract allowed filter
@@ -561,6 +631,7 @@ async def extract(file: UploadFile = File(...)):
     prominence_stats = {}
     aggregated, prominence_stats = apply_prominence_filter(aggregated, text)
     csv_text, final_rows = alloys_to_csv_rows(aggregated)
+    logger.info("After filters -> final rows: %d; prominence_stats=%s", len(final_rows), prominence_stats)
 
     # Fallback: legacy single-pass if no alloys detected
     fallback_used = False
@@ -594,10 +665,11 @@ async def extract(file: UploadFile = File(...)):
                         pruned.append(r)
                 parsed_rows = pruned
             final_rows = parsed_rows
-        except Exception:
+        except Exception as e:
             # Keep empty result with header
             csv_text = " | ".join(ALLOY_TABLE_HEADER)
             final_rows = []
+            logger.exception("Fallback failed: %s", e)
 
     # Save CSV
     csv_filename = f"alloy_table_{file_id}.csv"
@@ -608,6 +680,7 @@ async def extract(file: UploadFile = File(...)):
         writer.writerow(ALLOY_TABLE_HEADER)
         for r in final_rows:
             writer.writerow([r.get(col, '') for col in ALLOY_TABLE_HEADER])
+    logger.info("Wrote CSV: %s (rows=%d)", csv_path, len(final_rows))
 
     return JSONResponse({
         "file_id": file_id,
@@ -629,12 +702,34 @@ async def extract(file: UploadFile = File(...)):
         }
     })
 
+# Aliases
+@app.post("/api/extract")
+async def api_extract(file: UploadFile = File(...)):
+    return await extract(file)
+@app.post("/extract/")
+async def extract_trailing(file: UploadFile = File(...)):
+    return await extract(file)
+
+# OPTIONS for CORS preflight
+@app.options("/extract")
+@app.options("/api/extract")
+@app.options("/extract/")
+async def extract_options():
+    return JSONResponse(content={"ok": True}, headers={
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "*"
+    })
+
 @app.get("/download/{filename}")
 def download_csv(filename: str):
     path = os.path.join(RESULT_DIR, filename)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path, media_type='text/csv', filename=filename)
+
+@app.get("/api/download/{filename}")
+def api_download_csv(filename: str):
+    return download_csv(filename)
 
 if __name__ == "__main__":
     uvicorn.run("main_fastapi:app", host="0.0.0.0", port=8000, reload=True)
