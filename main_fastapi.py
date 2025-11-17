@@ -27,6 +27,7 @@ from llm_extractor import get_table_few_shot_block  # centralized few-shot helpe
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-oss:120b-cloud")
+DEMO_MODE = bool(int(os.environ.get("DEMO_MODE", "0")))
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -595,7 +596,63 @@ async def extract(file: UploadFile = File(...)):
     with open(raw_text_path, 'w', encoding='utf-8') as f:
         f.write(text)
 
-    # Multi-chunk processing
+    # If running in demo mode, return a deterministic sample without calling an LLM
+    if DEMO_MODE:
+        logger.info("DEMO_MODE=1 -> returning canned sample extraction result")
+        file_id = str(uuid.uuid4())
+        csv_text = " | ".join(ALLOY_TABLE_HEADER) + "\n" + " | ".join([
+            "Li20Mg20Al20Ti20V20",
+            "2.3 wt% (H/M=0.74)",
+            "250°C",
+            "",
+            "Mechanical alloying",
+            "Lightweight HEA; absorbs up to H/M=0.74",
+            "Phase separation of Mg during cycling"
+        ]) + "\n" + " | ".join([
+            "Fe-doped Mg2NiH4",
+            "-",
+            "400 K",
+            "",
+            "DFT/theoretical (doping design)",
+            "Reduced desorption enthalpy; improved ionic conductivity",
+            "Demo result without live LLM"
+        ])
+        final_rows = []
+        reader = csv.reader(io.StringIO(csv_text), delimiter='|')
+        rows = list(reader)
+        header = [h.strip() for h in rows[0]]
+        for r in rows[1:]:
+            if len(r) != len(header):
+                continue
+            final_rows.append({header[i].strip(): (r[i].strip() or '-') for i in range(len(header))})
+        csv_filename = f"alloy_table_{file_id}.csv"
+        csv_path = os.path.join(RESULT_DIR, csv_filename)
+        with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(ALLOY_TABLE_HEADER)
+            for r in final_rows:
+                writer.writerow([r.get(col, '') for col in ALLOY_TABLE_HEADER])
+        return JSONResponse({
+            "file_id": file_id,
+            "rows": final_rows,
+            "csv_text": csv_text,
+            "download_url": f"/download/{csv_filename}",
+            "model": "demo",
+            "diagnostics": {
+                "demo_mode": True,
+                "chunks": 0,
+                "chunk_errors": 0,
+                "fallback_used": False,
+                "total_alloys": len(final_rows),
+                "pre_filter_alloys": len(final_rows),
+                "kept_empty_alloys": False,
+                "filter_title_abstract": False,
+                "allowed_alloys_source_count": 0,
+                "removed_by_title_abstract": 0
+            }
+        })
+
+    # Multi-chunk processing (normal mode)
     title, abstract = extract_title_and_abstract(text)
     allowed_alloys = find_alloy_candidates(title + "\n" + abstract) if FILTER_TITLE_ABSTRACT else []
     logger.info("Title detected: %s", (title[:120] + '...') if title and len(title) > 120 else title)

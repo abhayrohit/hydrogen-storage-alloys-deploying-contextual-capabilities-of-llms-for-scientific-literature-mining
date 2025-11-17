@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hydrogen-alloy-extractor
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: DEMO_MODE
+        value: "1"
+      - key: MODEL_NAME
+        value: gpt-oss:120b-cloud
+      # If you have a public Ollama endpoint, set OLLAMA_URL accordingly
+      # - key: OLLAMA_URL
+      #   value: https://your-ollama-host:11434
