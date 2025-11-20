@@ -86,5 +86,3 @@ export MODEL_NAME="gpt-oss:120b-cloud"
 - Real-time progress tracking
 - Loading overlays during processing
 
-## 👥 Team
-AIE - B | Group - 17
