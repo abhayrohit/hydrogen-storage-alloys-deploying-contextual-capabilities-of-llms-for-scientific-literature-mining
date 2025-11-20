@@ -1,8 +1,6 @@
 # Hydrogen Storage Alloys - LLM Literature Mining
 
 ## 🚀 Live Demo
-**Frontend**: https://abhayrohit.github.io/literature-mining-hydrogen-storage-alloys/
-
 **Backend**: You need to run the backend locally (instructions below)
 
 ## 📋 Prerequisites
@@ -31,11 +29,6 @@ python main_fastapi.py
 The backend will start at: http://localhost:8000
 
 ### 4. Access the application
-**Option A - Use GitHub Pages (Recommended)**
-- Open: https://arooon-n.github.io/literature-mining-hydrogen-storage-alloys/
-- This will connect to your local backend at http://localhost:8000
-
-**Option B - Use Local Frontend**
 - Open: http://localhost:8000/
 
 ## 🌐 GitHub Pages Deployment
@@ -85,22 +78,6 @@ export MODEL_NAME="gpt-oss:120b-cloud"
 
 ```
 
-## 🔧 Troubleshooting
-
-### Backend not reachable
-- Ensure the backend is running: `python main_fastapi.py`
-- Check firewall settings allow localhost:8000
-- Verify Ollama is running: `ollama list`
-
-### CORS errors
-- The backend is configured to allow all origins
-- Clear browser cache (Ctrl+Shift+R)
-
-### GitHub Pages not updating
-- Check Actions tab in GitHub repository
-- Ensure GitHub Pages is enabled in repository settings
-- Wait 1-2 minutes after push for deployment
-
 ## 📊 Features
 - PDF upload and text extraction
 - Multi-chunk LLM processing for large papers
@@ -111,6 +88,3 @@ export MODEL_NAME="gpt-oss:120b-cloud"
 
 ## 👥 Team
 AIE - B | Group - 17
-
-## 📄 License
-MIT License
